@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "nuclei_sdk_hal.h": "c",
+        "gd32vf103v_rvstar.h": "c",
+        "nuclei_sdk_soc.h": "c",
+        "gd32vf103.h": "c",
+        "gd32vf103_libopt.h": "c",
+        "gd32vf103_rcu.h": "c",
+        "gd32vf103_i2c.h": "c",
+        "rc522.h": "c",
+        "RC522.H": "cpp"
+    }
+}
