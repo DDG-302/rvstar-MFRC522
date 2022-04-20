@@ -12,20 +12,21 @@ uint32_t MISO = GPIO_PIN_14; // 主机输入
 
 void SPI_port_init()
 {
-
-    gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, NSS);
+    rcu_periph_clock_enable(RCU_GPIOB);
+    rcu_periph_clock_enable(RCU_AF); // 复用功能时钟
+    rcu_periph_clock_enable(RCU_SPI1);
+    rcu_periph_clock_enable(RCU_GPIOA);
+    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, NSS);
 
     // 高电平不接受信号
-    // gpio_bit_set(GPIOB, NSS);
+    
     gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, MISO);
     gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, SCK);
     // MOSI需初始化为浮空输入模式
-    gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, MOSI);
+    gpio_init(GPIOB, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, MOSI);
 
-    rcu_periph_clock_enable(RCU_SPI1);
-    rcu_periph_clock_enable(RCU_GPIOB);
-    rcu_periph_clock_enable(RCU_AF); // 复用外部时钟
     spi_i2s_deinit(SPI1);
+    // gpio_bit_set(GPIOA, NSS);
 
     spi_parameter_struct spi_para;
     spi_struct_para_init(&spi_para);
@@ -79,13 +80,14 @@ uint16_t read_byte(uint8_t addr1, uint8_t addr2)
     return read_data_cmd;
 }
 
+
 int main()
 {
     SPI_port_init();
     spi_enable(SPI1);
     int count = 0;
 
-    rcu_periph_clock_enable(RCU_GPIOA);
+    // rcu_periph_clock_enable(RCU_GPIOA);
     // 将PA1初始化为推挽输出模式
     gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_1);
 
@@ -105,27 +107,38 @@ int main()
     // spi_i2s_data_receive(SPI1);
     // gpio_bit_set(GPIOB, NSS);
     // delay_1ms(100);
-    gpio_bit_reset(GPIOB, NSS);
-
+    
     while (1)
     {
-        printf("no:%d\n", count);
+        printf("no:%d\t", count);
         count = (count + 1) % 65530;
+
         while (RESET == spi_i2s_flag_get(SPI1, SPI_FLAG_TBE))// 输入缓冲
             ;
-        printf("sending\n");
-
-        // gpio_bit_reset(GPIOB, NSS);
-        spi_i2s_data_transmit(SPI1, convert_reg_addr(CommandReg, TRUE));
-
+        gpio_bit_reset(GPIOA, NSS);
+        spi_i2s_data_transmit(SPI1, convert_reg_addr(CommandReg, FALSE));
+        
+        spi_i2s_data_transmit(SPI1, PCD_RESETPHASE);
+        delay_1ms(100);
         while (RESET == spi_i2s_flag_get(SPI1, SPI_FLAG_RBNE))// 读取缓冲
             ;
-        // gpio_bit_set(GPIOB, NSS);
-        uint16_t *receive_data;
-        printf("reading\n");
-        receive_data = spi_i2s_data_receive(SPI1);
-        printf("%u\n", receive_data);
+        spi_i2s_data_receive(SPI1);
+        gpio_bit_set(GPIOA, NSS);
 
+        while (RESET == spi_i2s_flag_get(SPI1, SPI_FLAG_TBE))// 输入缓冲
+            ;
+        gpio_bit_reset(GPIOA, NSS);
+        spi_i2s_data_transmit(SPI1, convert_reg_addr(CommandReg, TRUE));
+        delay_1ms(100);
+        while (RESET == spi_i2s_flag_get(SPI1, SPI_FLAG_RBNE))// 读取缓冲
+            ;
+        gpio_bit_set(GPIOA, NSS);
+        // gpio_bit_reset(GPIOA, NSS);
+        uint16_t *receive_data;
+        // printf("reading\n");
+        receive_data = spi_i2s_data_receive(SPI1);
+        printf("data: %u\n", receive_data);
+        // printf("reg_addr=%u\n", convert_reg_addr(CommandReg, TRUE));
         gpio_bit_set(GPIOA, GPIO_PIN_1);
         delay_1ms(500);
         gpio_bit_reset(GPIOA, GPIO_PIN_1);
