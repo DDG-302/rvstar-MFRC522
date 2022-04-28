@@ -281,7 +281,7 @@ uint8_t select_card(char *pSnr)
 }
 
 // 防冲撞
-uint8_t PcdAnticoll(uint8_t *pSnr)
+uint8_t anti_coll(uint8_t *pSnr)
 {
     uint8_t status;
     uint8_t i,snr_check=0;
