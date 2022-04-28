@@ -1,69 +1,61 @@
 #pragma once
 #include "nuclei_sdk_hal.h"
 void RC522_init();
+void write_byte_test(uint16_t addr, uint16_t data);
+uint16_t read_byte_test(uint16_t addr);
+void write_raw(uint16_t addr, uint16_t data);
+uint8_t read_raw(uint16_t addr);
 // addr: 设备内寄存器地址
 // data: 要写入的数据
 void write_byte(uint16_t addr, uint16_t data);
 // addr: 读取的寄存器地址
 uint16_t read_byte(uint16_t addr);
 // 寻卡
-uint8_t request(uint8_t req_code, unsigned char *pTagType);
-// 防冲撞
-uint8_t PcdAnticoll(uint8_t *pSnr);
-// 选卡
-uint8_t select_card(char *pSnr);
-//验证密码
-uint8_t auth_state(unsigned char auth_mode,unsigned char addr,unsigned char *pKey,unsigned char *pSnr);
+void request(unsigned char *pTagType);
 // 开天线
 void antenna_on();
-// 读卡
-uint8_t read_card(uint8_t addr, uint8_t* data);
-
-
-
 static const uint16_t NSS = GPIO_PIN_5;
 static const uint16_t SCK = GPIO_PIN_13;
 static const uint16_t MOSI = GPIO_PIN_15; // 主机输出
 static const uint16_t MISO = GPIO_PIN_14; // 主机输入
 
-
 #define MAXRLEN        18
 #define MIN_STRENGTH  228
 //******************************************************************/
-//                    RC522 FIFO长度定义                            /
+//                    RC522 FIFO���ȶ���                            /
 //******************************************************************/
 #define DEF_FIFO_LENGTH             64           //FIFO size=64byte
 
 //******************************************************************/
-//                       RC522命令字                                /
+//                       RC522������                                /
 //******************************************************************/
-#define PCD_IDLE                  0x00           //取消当前命令
-#define PCD_AUTHENT               0x0E           //验证密钥
-#define PCD_RECEIVE               0x08           //接收数据
-#define PCD_TRANSMIT              0x04           //发送数据
-#define PCD_TRANSCEIVE            0x0C           //发送并接收数据
-#define PCD_RESETPHASE            0x0F           //复位
-#define PCD_CALCCRC               0x03           //CRC计算
+#define PCD_IDLE                  0x00           //ȡ����ǰ����
+#define PCD_AUTHENT               0x0E           //��֤��Կ
+#define PCD_RECEIVE               0x08           //��������
+#define PCD_TRANSMIT              0x04           //��������
+#define PCD_TRANSCEIVE            0x0C           //���Ͳ���������
+#define PCD_RESETPHASE            0x0F           //��λ
+#define PCD_CALCCRC               0x03           //CRC����
 
 //******************************************************************/
-//                   Mifare_One卡片命令字                          */
+//                   Mifare_One��Ƭ������                          */
 //******************************************************************/
-#define PICC_REQIDL               0x26           //寻天线区内未进入休眠状态
-#define PICC_REQALL               0x52           //寻天线区内全部卡
-#define PICC_ANTICOLL1            0x93           //防冲撞
-#define PICC_ANTICOLL2            0x95           //防冲撞
-#define PICC_AUTHENT1A            0x60           //验证A密钥
-#define PICC_AUTHENT1B            0x61           //验证B密钥
-#define PICC_READ                 0x30           //读块
-#define PICC_WRITE                0xA0           //写块
-#define PICC_DECREMENT            0xC0           //扣款
-#define PICC_INCREMENT            0xC1           //充值
-#define PICC_RESTORE              0xC2           //调块数据到缓冲区
-#define PICC_TRANSFER             0xB0           //保存缓冲区中数据
-#define PICC_HALT                 0x50           //休眠
+#define PICC_REQIDL               0x26           //Ѱ��������δ��������״̬
+#define PICC_REQALL               0x52           //Ѱ��������ȫ����
+#define PICC_ANTICOLL1            0x93           //����ײ
+#define PICC_ANTICOLL2            0x95           //����ײ
+#define PICC_AUTHENT1A            0x60           //��֤A��Կ
+#define PICC_AUTHENT1B            0x61           //��֤B��Կ
+#define PICC_READ                 0x30           //����
+#define PICC_WRITE                0xA0           //д��
+#define PICC_DECREMENT            0xC0           //�ۿ�
+#define PICC_INCREMENT            0xC1           //��ֵ
+#define PICC_RESTORE              0xC2           //�������ݵ�������
+#define PICC_TRANSFER             0xB0           //���滺����������
+#define PICC_HALT                 0x50           //����
 
 //******************************************************************/
-//                        MF522寄存器定义                           /
+//                        MF522�Ĵ�������                           /
 //******************************************************************/
 // PAGE 0
 #define     RFU00                 0x00    
@@ -135,7 +127,7 @@ static const uint16_t MISO = GPIO_PIN_14; // 主机输入
 #define     RFU3F		  0x3F
 
 //******************************************************************/
-//                    RC522通讯返回错误代码                         /
+//                    RC522ͨѶ���ش������                         /
 //******************************************************************/
 #define MI_ERR                      0xFE 
 //#define MI_ERR                         //(-2)
@@ -217,3 +209,5 @@ static const uint16_t MISO = GPIO_PIN_14; // 主机输入
 #define MI_MFRC_RESET               0x87 
 #define MI_WRONG_VALUE              0x86 
 #define MI_VALERR                   0x85
+
+

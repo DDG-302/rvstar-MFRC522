@@ -1,14 +1,16 @@
-/* 实验1：点亮LED */
 #include "nuclei_sdk_hal.h"
 #include "RC522.H"
 #include "stdio.h"
 #include "stdlib.h"
 
+// #include "RC522.C"
+
 // NSS为低时从机接收数据流，若要接收多个数据流，则NSS需要拉高一次
-uint32_t NSS = GPIO_PIN_5;
-uint32_t SCK = GPIO_PIN_13;
-uint32_t MOSI = GPIO_PIN_15; // 主机输出
-uint32_t MISO = GPIO_PIN_14; // 主机输入
+
+// uint16_t NSS = GPIO_PIN_5;
+// uint16_t SCK = GPIO_PIN_13;
+// uint16_t MOSI = GPIO_PIN_15; // 主机输出
+// uint16_t MISO = GPIO_PIN_14; // 主机输入
 
 void SPI_port_init()
 {
@@ -20,13 +22,12 @@ void SPI_port_init()
 
     // 高电平不接受信号
     
-    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, MISO);
+    gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, MISO);
     gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, SCK);
-    // MOSI需初始化为浮空输入模式
-    gpio_init(GPIOB, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, MOSI);
+    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, MOSI);
 
     spi_i2s_deinit(SPI1);
-    // gpio_bit_set(GPIOA, NSS);
+    gpio_bit_set(GPIOA, NSS);
 
     spi_parameter_struct spi_para;
     spi_struct_para_init(&spi_para);
@@ -35,110 +36,123 @@ void SPI_port_init()
     spi_para.trans_mode = SPI_TRANSMODE_FULLDUPLEX;
     spi_para.frame_size = SPI_FRAMESIZE_8BIT;
     spi_para.nss = SPI_NSS_SOFT;
-    spi_para.endian = SPI_ENDIAN_LSB;
+    spi_para.endian = SPI_ENDIAN_MSB;
     spi_para.clock_polarity_phase = SPI_CK_PL_LOW_PH_1EDGE;
     spi_para.prescale = SPI_PSC_128;
 
     spi_init(SPI1, &spi_para);
     // spi_enable(SPI1);
     // spi_nss_output_enable(SPI1);
-    // spi_i2s_data_frame_format_config(SPI1, SPI_FRAMESIZE_8BIT);
+    spi_i2s_data_frame_format_config(SPI1, SPI_FRAMESIZE_8BIT);
     // spi_nss_internal_high(SPI1);
 }
 
-uint8_t convert_reg_addr(int8_t addr, BOOL is_read)
-{
-    // addr格式为
-    // 7       -       6 - 5 - 4 - 3 - 2 - 1 - 0
-    // 1/0(read/write) |          address     | RFU
-    // RFU要求一直为0，地址是6位，要放到第1-6位
-    uint8_t address = 0;
-    if (is_read)
-    {
-        address = 0b10000000;
+void GPIO_init(){
+    rcu_periph_clock_enable(RCU_GPIOB);
+    rcu_periph_clock_enable(RCU_GPIOA);
+    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, NSS);
+
+    // 高电平不接受信号
+    
+    gpio_init(GPIOB, GPIO_MODE_IPD, GPIO_OSPEED_50MHZ, MISO);
+    gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, SCK);
+    gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, MOSI);
+    gpio_bit_reset(GPIOA, NSS);
+    gpio_bit_reset(GPIOB, SCK);
+}
+
+
+void find_card(){
+    unsigned char temp[4];
+    uint8_t status = request(0x52, temp);
+    
+    if(status != MI_OK){
+      printf("error_happend...\n");
     }
-    int mask = 0b111111;
-    address += (addr & mask) << 1;
-    return address;
+    if(temp[0]==0x04&&temp[1]==0x00)  
+          printf("MFOne-S50\n");
+        else if(temp[0]==0x02&&temp[1]==0x00)
+          printf("MFOne-S70\n");
+        else if(temp[0]==0x44&&temp[1]==0x00)
+          printf("MF-UltraLight\n");
+        else if(temp[0]==0x08&&temp[1]==0x00)
+          printf("MF-Pro\n");
+        else if(temp[0]==0x44&&temp[1]==0x03)
+          printf("MF Desire\n");
+        else
+          printf("Unknown\ttemp[0]=%d temp[1]=%d\n", temp[0],temp[1]);
 }
 
-// addr: 设备内寄存器地址
-// data: 要写入的数据
-uint16_t write_byte(uint8_t addr, uint8_t data)
-{
-    uint16_t write_data_cmd;
-    write_data_cmd = ((uint16_t)convert_reg_addr(addr, FALSE) << 8) + (uint16_t)data;
-    return write_data_cmd;
+void EXTI0_IRQHandler(){
+  
 }
-
-// addr1: 读取的寄存器地址
-// addr2: 读取的寄存器地址2，可以为空
-uint16_t read_byte(uint8_t addr1, uint8_t addr2)
-{
-    uint16_t read_data_cmd;
-    read_data_cmd = ((uint16_t)convert_reg_addr(addr1, TRUE) << 8) + ((uint16_t)convert_reg_addr(addr2, TRUE));
-    return read_data_cmd;
-}
-
 
 int main()
 {
     SPI_port_init();
     spi_enable(SPI1);
-    int count = 0;
-
-    // rcu_periph_clock_enable(RCU_GPIOA);
-    // 将PA1初始化为推挽输出模式
-    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_1);
-
-/***** 初始化reset *****/
-    // delay_1ms(2000);
-    // printf("waiting flag 1 INIT\n\r");
-    // while (RESET == spi_i2s_flag_get(SPI1, SPI_FLAG_TBE))
-    //     ;
-    // printf("sending\n\r");
-
-    // gpio_bit_reset(GPIOB, NSS);
-    // spi_i2s_data_transmit(SPI1, convert_reg_addr(CommandReg, FALSE));
-    // spi_i2s_data_transmit(SPI1, PCD_RESETPHASE);
-    // printf("waiting init response\n\r");
-    // while (RESET == spi_i2s_flag_get(SPI1, SPI_FLAG_RBNE))
-    //     ;
-    // spi_i2s_data_receive(SPI1);
-    // gpio_bit_set(GPIOB, NSS);
-    // delay_1ms(100);
+    // GPIO_init();
     
+    int count = 0;
+    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_1); // 板载LED灯（绿色）
+
+    // int no = 0;
+    // while(1){
+    //   printf("no:%d\n", no);
+      
+    //   write_byte(ComIEnReg, 120);
+    //   write_byte(RFU10, 1);
+    //   // read_byte(RFU00);
+    //   // read_byte(RFU00);
+    //   int i = read_byte(ComIEnReg);
+    //   printf("%d\n", i);
+    //   printf("%d\n",read_byte(ComIEnReg));
+    //   printf("%d\n",read_byte(ComIEnReg));
+    //   printf("%d\n",read_byte(ComIEnReg));
+    //   delay_1ms(500);
+    //   no = (no+1)%1000;
+    // }
+
+
+    RC522_init();
+    antenna_on();
+        
     while (1)
     {
         printf("no:%d\t", count);
         count = (count + 1) % 65530;
-
-        while (RESET == spi_i2s_flag_get(SPI1, SPI_FLAG_TBE))// 输入缓冲
-            ;
-        gpio_bit_reset(GPIOA, NSS);
-        spi_i2s_data_transmit(SPI1, convert_reg_addr(CommandReg, FALSE));
+        // uint16_t receive_data;
+        // receive_data = read_byte(CommandReg);
+        find_card();
+        uint8_t id[4];
+        uint8_t status;
+        status = PcdAnticoll(id);
+        if(status == MI_OK){
+        printf("anticoll correct\n");
+      }
+      else{
+        printf("anticoll error\n");
+      }
+        for(int i=0;i<4;i++)
+        {
+          printf("%x",id[i]);
+        }
         
-        spi_i2s_data_transmit(SPI1, PCD_RESETPHASE);
-        delay_1ms(100);
-        while (RESET == spi_i2s_flag_get(SPI1, SPI_FLAG_RBNE))// 读取缓冲
-            ;
-        spi_i2s_data_receive(SPI1);
-        gpio_bit_set(GPIOA, NSS);
+			printf("\n");
+      status = select_card(id);
 
-        while (RESET == spi_i2s_flag_get(SPI1, SPI_FLAG_TBE))// 输入缓冲
-            ;
-        gpio_bit_reset(GPIOA, NSS);
-        spi_i2s_data_transmit(SPI1, convert_reg_addr(CommandReg, TRUE));
-        delay_1ms(100);
-        while (RESET == spi_i2s_flag_get(SPI1, SPI_FLAG_RBNE))// 读取缓冲
-            ;
-        gpio_bit_set(GPIOA, NSS);
-        // gpio_bit_reset(GPIOA, NSS);
-        uint16_t *receive_data;
-        // printf("reading\n");
-        receive_data = spi_i2s_data_receive(SPI1);
-        printf("data: %u\n", receive_data);
-        // printf("reg_addr=%u\n", convert_reg_addr(CommandReg, TRUE));
+      uint8_t DefaultKey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; 
+     status = auth_state(0x60, 10, DefaultKey, id);
+      if(status == MI_OK){
+        printf("key correct\n");
+      }
+      else{
+        printf("key error\n");
+      }
+        uint8_t dddd[16];
+        read_card(10, dddd);
+        
+
         gpio_bit_set(GPIOA, GPIO_PIN_1);
         delay_1ms(500);
         gpio_bit_reset(GPIOA, GPIO_PIN_1);
