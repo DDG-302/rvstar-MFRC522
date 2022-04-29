@@ -31,7 +31,7 @@ uint8_t anti_coll(uint8_t *pSnr);
 //参数说明: pSnr[IN]:卡片序列号，4字节
 //返    回: 成功返回MI_OK
 /////////////////////////////////////////////////////////////////////
-uint8_t select_card(char *pSnr);
+uint8_t select_card(uint8_t *pSnr);
 /////////////////////////////////////////////////////////////////////
 //功    能：验证卡片密码
 //参数说明: auth_mode[IN]: 密码验证模式
@@ -47,13 +47,30 @@ uint8_t auth_state(unsigned char auth_mode,unsigned char addr,unsigned char *pKe
 void antenna_on();
 // 读卡
 uint8_t read_card(uint8_t addr, uint8_t* data);
+/////////////////////////////////////////////////////////////////////
+//功    能：写数据到M1卡一块
+//参数说明: addr[IN]：块地址
+//          pData[IN]：写入的数据，16字节
+//返    回: 成功返回MI_OK
+///////////////////////////////////////////////////////////////////// 
+char write_card(unsigned char addr,unsigned char *pData);
 
+uint8_t card_halt();
+
+#define CARD_VERIFIED 0x00 // 卡通过检查
+#define CARD_NOT_FOUND 0x01 // 无卡
+#define CARD_DENY 0x02 // 拒绝接受卡片
 
 
 static const uint16_t NSS = GPIO_PIN_5;
 static const uint16_t SCK = GPIO_PIN_13;
 static const uint16_t MOSI = GPIO_PIN_15; // 主机输出
 static const uint16_t MISO = GPIO_PIN_14; // 主机输入
+
+static const uint16_t LED_YELLOW = GPIO_PIN_0;
+static const uint16_t LED_GREEN = GPIO_PIN_1;
+static const uint16_t LED_RED = GPIO_PIN_2;
+
 
 
 #define MAXRLEN        18

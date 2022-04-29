@@ -153,7 +153,7 @@ uint8_t  com_with_MF522(uint8_t cmd, unsigned char *sending_data,
     write_byte(CommandReg, PCD_IDLE);
     // 设最高位1，清空FIFOLevel
     // FIFOLevelReg低7位是数据
-    // 表示FIFODataReg中
+    // 表示FIFODataReg中数据量
     set_bit_mask(FIFOLevelReg, 0x80);
 
     for(int i = 0; i < sending_length; i++){
@@ -177,12 +177,12 @@ uint8_t  com_with_MF522(uint8_t cmd, unsigned char *sending_data,
         if(!(read_byte(ErrorReg)&0x1B)){
             status = MI_OK;
             if(n&irqEn&0x01){
-                printf("no card \n"); 
-                printf("n = %d\n", n);
+                // printf("no card \n"); 
+                // printf("n = %d\n", n);
                 status = MI_NOTAGERR;
             }     
             else{
-                printf("find card! \n");
+                // printf("find card! \n");
             }
             if(cmd == PCD_TRANSCEIVE){
                 // 获取读到的数据大小
@@ -204,18 +204,16 @@ uint8_t  com_with_MF522(uint8_t cmd, unsigned char *sending_data,
                     receiving_data[i] = read_byte(FIFODataReg);
                 }
             }
-            else{
-                status = MI_ERR;
-            }
         }
         else{
-            printf("errorreg:%d", read_byte(ErrorReg));
+            printf("errorreg:%d\n", read_byte(ErrorReg));
+            status = MI_ERR;
         }
         
     }
-    else{
-        printf("timeout\n");
-    }
+    // else{
+        // printf("timeout\n");
+    // }
     set_bit_mask(ControlReg,0x80);// 停止时钟
     write_byte(CommandReg,PCD_IDLE); 
     return status;
@@ -251,11 +249,19 @@ uint8_t request(uint8_t req_code, u_char *pTagType){
 }
 
 // 选卡
-uint8_t select_card(char *pSnr)
+uint8_t select_card(uint8_t *pSnr)
 {
+
+    // for(int j = 0; j < 4; j++){
+    //     printf("%d", j);
+    // }
+    // printf("\n");
+
+
+
     uint8_t status;
     uint8_t i;
-    unsigned int  unLen;
+    uint8_t  unLen;
     uint8_t ucComMF522Buf[MAXRLEN]; 
     
     ucComMF522Buf[0] = PICC_ANTICOLL1;
@@ -315,20 +321,33 @@ uint8_t anti_coll(uint8_t *pSnr)
 
 // 验证密码
 uint8_t auth_state(unsigned char auth_mode,unsigned char addr,unsigned char *pKey,unsigned char *pSnr){
+    // printf("auth cardid: ");
+    // for(int j = 0; j < 4; j++){
+    //     printf("%d", pSnr[j]);
+    // }
+    // printf("\n");
+    // printf("auth key: ");
+    // for(int j = 0; j < 6; j++){
+    //     printf("%x", pKey[j]);
+    // }
+    // printf("\n");
+    
     char status;
-    unsigned int  unLen;
+    uint8_t  unLen;
     unsigned char i,ucComMF522Buf[MAXRLEN]; 
 
     ucComMF522Buf[0] = auth_mode;
     ucComMF522Buf[1] = addr;
     for (i=0; i<6; i++)
     {    ucComMF522Buf[i+2] = *(pKey+i);   }
-    for (i=0; i<6; i++)
+    for (i=0; i<4; i++)
     {    ucComMF522Buf[i+8] = *(pSnr+i);   }
  //   memcpy(&ucComMF522Buf[2], pKey, 6); 
  //   memcpy(&ucComMF522Buf[8], pSnr, 4); 
     
     status = com_with_MF522(PCD_AUTHENT,ucComMF522Buf,12,ucComMF522Buf,&unLen);
+
+    
     if ((status != MI_OK) || (!(read_byte(Status2Reg) & 0x08)))
     {   status = MI_ERR;   }
     
@@ -344,9 +363,9 @@ uint8_t read_card(uint8_t addr, uint8_t* data){
     ucComMF522Buf[1] = addr;
     calulate_CRC(ucComMF522Buf, 2, &ucComMF522Buf[2]);
     status = com_with_MF522(PCD_TRANSCEIVE, ucComMF522Buf, 4, ucComMF522Buf, &unLen);
-    if(status == MI_OK){
-        printf("unlen: %d\n", unLen);
-        for(int i = 0; i < unLen; i++){
+    if(status == MI_OK && unLen == 0x90){
+        // printf("unlen: %d\n", unLen);
+        for(int i = 0; i < 16; i++){
             data[i] = ucComMF522Buf[i];
             printf("%d, ", data[i]);
         }
@@ -355,6 +374,57 @@ uint8_t read_card(uint8_t addr, uint8_t* data){
     else{
         printf("read error\n");
     }
+    return status;
+}
+
+uint8_t card_halt()
+{
+    uint8_t status;
+    unsigned int  unLen;
+    unsigned char ucComMF522Buf[MAXRLEN]; 
+
+    ucComMF522Buf[0] = PICC_HALT;
+    ucComMF522Buf[1] = 0;
+    calulate_CRC(ucComMF522Buf,2,&ucComMF522Buf[2]);
+ 
+    status = com_with_MF522(PCD_TRANSCEIVE,ucComMF522Buf,4,ucComMF522Buf,&unLen);
+
+    return MI_OK;
+}
+
+char write_card(unsigned char addr,unsigned char *pData)
+{
+    char status;
+    uint8_t  unLen;
+    unsigned char i,ucComMF522Buf[MAXRLEN]; 
+    
+    ucComMF522Buf[0] = PICC_WRITE;
+    ucComMF522Buf[1] = addr;
+    calulate_CRC(ucComMF522Buf,2,&ucComMF522Buf[2]);
+ 
+    status = com_with_MF522(PCD_TRANSCEIVE,ucComMF522Buf,4,ucComMF522Buf,&unLen);
+        printf("1auth_com_status:%X\n", status);
+        printf("1auth_com_unlen:%x\n", unLen);
+        printf("1auth_com_ucComMF522Buf[0] & 0x0F:%x\n", ucComMF522Buf[0] & 0x0F);
+        printf("=====\n");
+    if ((status != MI_OK) || (unLen != 4) || ((ucComMF522Buf[0] & 0x0F) != 0x0A))
+    {   status = MI_ERR;   }
+        
+    if (status == MI_OK)
+    {
+        //memcpy(ucComMF522Buf, pData, 16);
+        for (i=0; i<16; i++)
+        {    ucComMF522Buf[i] = *(pData+i);   }
+        calulate_CRC(ucComMF522Buf,16,&ucComMF522Buf[16]);
+
+        status = com_with_MF522(PCD_TRANSCEIVE,ucComMF522Buf,18,ucComMF522Buf,&unLen);
+        printf("auth_com_status:%X\n", status);
+        printf("auth_com_unlen:%x\n", unLen);
+        printf("auth_com_ucComMF522Buf[0] & 0x0F:%x\n", ucComMF522Buf[0] & 0x0F);
+        if ((status != MI_OK) || (unLen != 4) || ((ucComMF522Buf[0] & 0x0F) != 0x0A))
+        {   status = MI_ERR;   }
+    }
+    
     return status;
 }
 
