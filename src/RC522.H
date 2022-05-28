@@ -1,11 +1,21 @@
 #pragma once
 #include "nuclei_sdk_hal.h"
+// RC522初始化
 void RC522_init();
-// addr: 设备内寄存器地址
-// data: 要写入的数据
+
+/////////////////////////////////////////////////////////////////////
+//功    能：写RC522寄存器
+//参数说明: addr[IN]：RC522寄存器地址
+//          data[IN]：要写的数据
+/////////////////////////////////////////////////////////////////////
 void write_byte(uint16_t addr, uint16_t data);
-// addr: 读取的寄存器地址
+
+/////////////////////////////////////////////////////////////////////
+//功    能：读RC522寄存器
+//参数说明: addr[IN]：RC522寄存器地址
+/////////////////////////////////////////////////////////////////////
 uint16_t read_byte(uint16_t addr);
+
 /////////////////////////////////////////////////////////////////////
 //功    能：寻卡
 //参数说明: req_code[IN]:寻卡方式
@@ -20,18 +30,21 @@ uint16_t read_byte(uint16_t addr);
 //返    回: 成功返回MI_OK
 /////////////////////////////////////////////////////////////////////
 uint8_t request(uint8_t req_code, unsigned char *pTagType);
+
 /////////////////////////////////////////////////////////////////////
 //功    能：防冲撞
 //参数说明: pSnr[OUT]:卡片序列号，4字节
 //返    回: 成功返回MI_OK
 /////////////////////////////////////////////////////////////////////  
 uint8_t anti_coll(uint8_t *pSnr);
+
 /////////////////////////////////////////////////////////////////////
 //功    能：选定卡片
 //参数说明: pSnr[IN]:卡片序列号，4字节
 //返    回: 成功返回MI_OK
 /////////////////////////////////////////////////////////////////////
 uint8_t select_card(uint8_t *pSnr);
+
 /////////////////////////////////////////////////////////////////////
 //功    能：验证卡片密码
 //参数说明: auth_mode[IN]: 密码验证模式
@@ -43,10 +56,19 @@ uint8_t select_card(uint8_t *pSnr);
 //返    回: 成功返回MI_OK
 /////////////////////////////////////////////////////////////////////               
 uint8_t auth_state(unsigned char auth_mode,unsigned char addr,unsigned char *pKey,unsigned char *pSnr);
-// 开天线
+
+// 开天线，初始化后天线就已经是开启状态了
+// 除非主动关闭，否则可以不开
 void antenna_on();
-// 读卡
+
+/////////////////////////////////////////////////////////////////////
+//功    能：读M1卡一块
+//参数说明: addr[IN]：块地址
+//          Data[IN]：写入的数据，16字节
+//返    回: 成功返回MI_OK
+///////////////////////////////////////////////////////////////////// 
 uint8_t read_card(uint8_t addr, uint8_t* data);
+
 /////////////////////////////////////////////////////////////////////
 //功    能：写数据到M1卡一块
 //参数说明: addr[IN]：块地址
@@ -55,21 +77,40 @@ uint8_t read_card(uint8_t addr, uint8_t* data);
 ///////////////////////////////////////////////////////////////////// 
 char write_card(unsigned char addr,unsigned char *pData);
 
+// 休眠卡
 uint8_t card_halt();
 
 #define CARD_VERIFIED 0x00 // 卡通过检查
 #define CARD_NOT_FOUND 0x01 // 无卡
 #define CARD_DENY 0x02 // 拒绝接受卡片
+#define CARD_ERR 0X03 // 通信错误
 
+//******************************************************************/
+//                       RVSTAR SPI设置                               /
+//******************************************************************/
+#define NSS  GPIO_PIN_5
+#define SCK  GPIO_PIN_13
+#define MOSI  GPIO_PIN_15 // 主机输出
+#define MISO  GPIO_PIN_14 // 主机输入
 
-static const uint16_t NSS = GPIO_PIN_5;
-static const uint16_t SCK = GPIO_PIN_13;
-static const uint16_t MOSI = GPIO_PIN_15; // 主机输出
-static const uint16_t MISO = GPIO_PIN_14; // 主机输入
+//******************************************************************/
+//                       RVSTAR板载LED                                /
+//******************************************************************/
+#define LED_BOARD_BLUE  GPIO_PIN_3
+#define LED_BOARD_GREEN  GPIO_PIN_1
+#define LED_BOARD_RED  GPIO_PIN_2
 
-static const uint16_t LED_YELLOW = GPIO_PIN_0;
-static const uint16_t LED_GREEN = GPIO_PIN_1;
-static const uint16_t LED_RED = GPIO_PIN_2;
+//******************************************************************/
+//                       RVSTAR外设LED                                /
+//******************************************************************/
+#define LED_PERIPH_RED  GPIO_PIN_5
+#define LED_PERIPH_GREEN  GPIO_PIN_0
+#define LED_PERIPH_YELLOW  GPIO_PIN_1
+
+#define LED_PERIPH_DOOR_RED  GPIO_PIN_9
+#define LED_PERIPH_DOOR_GREEN  GPIO_PIN_8
+#define LED_PERIPH_DOOR_YELLOW  GPIO_PIN_6
+
 
 
 

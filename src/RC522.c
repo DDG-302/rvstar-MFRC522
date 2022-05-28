@@ -2,8 +2,9 @@
 #include "RC522.H"
 #include "stdio.h"
 
-// TX是串口通信引脚
 
+// RC522要求6位reg地址在中间，低位为0，高位控制读写
+// 输入地址和是否读写，将输出符合RC522要求的8位地址
 uint16_t convert_reg_addr(uint8_t addr, BOOL is_read)
 {
     // addr格式为
